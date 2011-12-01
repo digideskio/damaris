@@ -29,3 +29,12 @@ add_library (damaris-server ${DAMARIS_SERVER_LIB_SRC})
 add_executable (server ${DAMARIS_SOURCE_DIR}/server/main.cpp)
 
 target_link_libraries (server damaris-server damaris xerces-c ${BOOST_LIBRARIES} rt dl)
+
+INSTALL(TARGETS
+     server
+     damaris-server
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+)
+

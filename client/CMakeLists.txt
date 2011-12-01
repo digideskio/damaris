@@ -24,3 +24,14 @@ set(DAMARIS_CLIENT_SRC
 	${DAMARIS_SOURCE_DIR}/common/Layout.cpp)
 
 add_library (damaris ${DAMARIS_CLIENT_SRC})
+
+INSTALL(TARGETS 
+	damaris
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+INSTALL(FILES
+  damaris.mod
+  DESTINATION lib
+  )
