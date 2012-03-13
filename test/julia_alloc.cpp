@@ -18,7 +18,7 @@ char julia(std::complex<double> c, std::complex<double> z0) {
 		zi = (zi*zi) + c;
 		if(std::abs<double>(zi) >= 4.0) return (char)i;
 	}
-	return 255;
+	return (char)255;
 }
 
 int compute(char* data, std::complex<double> c) {

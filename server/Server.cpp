@@ -27,6 +27,7 @@ along with Damaris.  If not, see <http://www.gnu.org/licenses/>.
 #include "common/SharedMemorySegment.hpp"
 #include "common/Configuration.hpp"
 #include "server/Server.hpp"
+#include "server/SecondaryServer.hpp"
 #include "common/Message.hpp"
 #include "common/ShmChunk.hpp"
 #include "common/Layout.hpp"
@@ -39,35 +40,40 @@ namespace Damaris {
 	/* constructor for embedded mode */
 Server::Server(const std::string &cf, int id)
 {
-	std::auto_ptr<Model::simulation_mdl> 
-		mdl(Model::simulation(cf.c_str(),xml_schema::flags::dont_validate));
-	DBG("Model build successfuly from configuration file");		
+	try {
+		std::auto_ptr<Model::simulation_mdl> 
+			mdl(Model::simulation(cf.c_str(),xml_schema::flags::dont_validate));
 
-	Configuration::initialize(mdl,cf);
-	DBG("Configuration initialized successfuly");
+		DBG("Model build successfuly from configuration file");		
 
-	Environment::initialize(mdl,id);
-	DBG("Environment initialized successfuly");
+		config = Configuration::getInstance();
+		config->initialize(mdl,cf);
+		DBG("Configuration initialized successfuly");
 
-	config = Configuration::getInstance();
-	env    = Environment::getInstance();
+		env = config->getEnvironment();
+		env->setID(id);
+		DBG("Environment initialized successfuly");
+	
+		init();
 
-	init();
+	} catch(xml_schema::exception &e) {
+                ERROR(e.what());
+                exit(-1);
+        }
 }
 
 /* constructor for standalone mode */
-Server::Server(Configuration* c, Environment *e)
+Server::Server(Configuration* c)
 {
 	config = c;
-	env    = e;
-	
+	env    = config->getEnvironment();
 	init();
 }
 
 /* initialization */
 void Server::init() 
 {
-	needStop = config->getClientsPerNode();
+	needStop = env->getClientsPerNode();
 	/* creating shared structures */
 	DBG("Starting creation of shared structures...");
 	try {
@@ -76,26 +82,26 @@ void Server::init()
 		SharedMemorySegment::remove(sysv_shmem,config->getSegmentName()->c_str());	
 		
 		msgQueue = SharedMessageQueue::create(sysv_shmem,
-					      config->getMsgQueueName().c_str(),
-					      (size_t)config->getMsgQueueSize(),
+					      env->getMsgQueueName().c_str(),
+					      (size_t)env->getMsgQueueSize(),
 					      sizeof(Message));
 		segment = SharedMemorySegment::create(sysv_shmem,
-						config->getSegmentName().c_str(),
-						(size_t)config->getSegmentSize());
+						env->getSegmentName().c_str(),
+						(size_t)entv->getSegmentSize());
 
 #else
-		SharedMessageQueue::remove(posix_shmem,config->getMsgQueueName().c_str());
-		SharedMemorySegment::remove(posix_shmem,config->getSegmentName().c_str());      
+		SharedMessageQueue::remove(posix_shmem,env->getMsgQueueName().c_str());
+		SharedMemorySegment::remove(posix_shmem,env->getSegmentName().c_str());      
 		
 		msgQueue = SharedMessageQueue::create(posix_shmem,
-						config->getMsgQueueName().c_str(),
-						(size_t)config->getMsgQueueSize(),
+						env->getMsgQueueName().c_str(),
+						(size_t)env->getMsgQueueSize(),
 						sizeof(Message));
 		DBG("Shared message queue created");
                        
 		segment = SharedMemorySegment::create(posix_shmem,
-						config->getSegmentName().c_str(),
-						(size_t)config->getSegmentSize());
+						env->getSegmentName().c_str(),
+						(size_t)env->getSegmentSize());
 		DBG("Shared Segment created");
 #endif
 	}
@@ -121,17 +127,12 @@ void Server::init()
 Server::~Server()
 {
 #ifdef __SYSV
-	SharedMessageQueue::remove(sysv_shmem,config->getMsgQueueName().c_str());
-	SharedMemorySegment::remove(sysv_shmem,config->getSegmentName().c_str());
+	SharedMessageQueue::remove(sysv_shmem,env->getMsgQueueName().c_str());
+	SharedMemorySegment::remove(sysv_shmem,env->getSegmentName().c_str());
 #else
-	SharedMessageQueue::remove(posix_shmem,config->getMsgQueueName().c_str());
-	SharedMemorySegment::remove(posix_shmem,config->getSegmentName().c_str());
+	SharedMessageQueue::remove(posix_shmem,env->getMsgQueueName().c_str());
+	SharedMemorySegment::remove(posix_shmem,env->getSegmentName().c_str());
 #endif
-	delete msgQueue;
-	delete segment;
-		
-	Configuration::finalize();
-	Environment::finalize();
 }
 	
 /* starts the server and enter the main loop */
@@ -147,7 +148,7 @@ int Server::run()
 	while(needStop > 0) {
 		received = msgQueue->tryReceive(msg,sizeof(Message), recvSize, priority);
 		if(received) {
-			DBG("Received a	message of type " << msg->type);
+			DBG("Received a message of type " << msg->type);
 			processMessage(msg);
 		}
 	}
@@ -166,23 +167,29 @@ void Server::processMessage(Message* msg)
 	
 	if(msg->type == MSG_VAR)
 	{
-		ShmChunk* chunk = new ShmChunk(segment,handle); 
+		try {
+		ShmChunk* chunk = new ShmChunk(segment,handle);
 		Variable* v = metadataManager->getVariable(object);
-		if(v != NULL) v->attachChunk(chunk);
-		else {
+		if(v != NULL) {
+			INFO("A");
+			v->attachChunk(chunk);
+			INFO("B");
+		} else {
 			// the variable is unknown, discarde it
 			ERROR("Server received a chunk " 
 				<< "for an unknown variable, discarding");
 			chunk->remove();
 			delete chunk;
 		}
+		} catch(std::exception &e) {
+			ERROR(e.what());
+		}
 		return;
 	}
 	
-	if(msg->type == MSG_SIG) 
+	if(msg->type == MSG_SIG)
 	{
-		actionsManager->reactToUserSignal(object,
-				iteration,source,metadataManager);
+		actionsManager->reactToUserSignal(object,iteration,source);
 		return;
 	}
 
@@ -196,7 +203,8 @@ void Server::processInternalSignal(int32_t object)
 {
 	switch(object) {
 	case KILL_SERVER:
-		needStop--; break;
+		needStop--; 
+		break;
 	}
 }
 
@@ -206,52 +214,297 @@ void Server::stop()
 	needStop = 0;
 }
 
-#ifdef __ENABLE_MPI
-Client* start_mpi_entity(const std::string& configFile, MPI_Comm* newcomm, int* newrank, int* newsize)
-{
-	int size, rank;
-	MPI_Comm_size(MPI_COMM_WORLD,&size);
-	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+void* Server::alloc(const std::string & varname, int32_t iteration)
+	{
+		/* this is basically the same code than in Client, we copy it here
+		   to be sure that any modification on Client won't affect it. */
 
-	std::auto_ptr<Model::simulation_mdl> 
-		mdl(Model::simulation(configFile.c_str(),xml_schema::flags::dont_validate));
+		/* check that the variable is known in the configuration */
+		Variable* variable = metadataManager->getVariable(varname);
 
-	Configuration::initialize(mdl,configFile);
-	Configuration* config = Configuration::getInstance();
+        	if(variable == NULL) {
+			ERROR("Variable \""<< varname 
+				<< "\" not defined in configuration");
+			return NULL;
+        	}
 
-	int clpn = config->getClientsPerNode();
-	int copn = config->getCoresPerNode();
+		/* the variable is known, get its layout */
+		Layout* layout = variable->getLayout();
 
-	DBG("Starting MPI instances for " << clpn << " clients per core");
-	int is_server = (rank % copn) < (copn - clpn);
-	int is_client = not is_server;
+		/* prepare variable to initialize a chunk */
+		std::vector<int> si(layout->getDimensions()),ei(layout->getDimensions());
+		for(unsigned int i=0; i < layout->getDimensions(); i++)	{
+			ei[i] = layout->getExtentAlongDimension(i)-1;
+			si[i] = 0;
+		}
 
-	MPI_Comm_split(MPI_COMM_WORLD,is_client,rank,newcomm);
-	MPI_Comm_rank(*newcomm,newrank);
-	MPI_Comm_size(*newcomm,newsize);
+		/* try initializing the chunk in shared memory */
+		try {
+			ShmChunk* chunk = 
+				new ShmChunk(segment,layout->getType(),
+						layout->getDimensions(),si,ei);
+			chunk->setSource(env->getID());
+			chunk->setIteration(iteration);
+			variable->attachChunk(chunk);
+			/* chunk initialized, returns the data! */
+			return chunk->data();
 
-	Environment::initialize(mdl,rank);
-	Environment* env = Environment::getInstance();
-
-	if(is_client) {
-		DBG("Client starting, rank = " << rank);
-		MPI_Barrier(MPI_COMM_WORLD);
-		return new Client(config,env);
-	} else {
-		DBG("Server starting, rank = " << rank);
-		Server server(config,env);
-		MPI_Barrier(MPI_COMM_WORLD);
-		server.run();
+		} catch (...) {
+			ERROR("While allocating \"" << varname 
+				<< "\", allocation failed");
+		}
+		/* on failure, returns NULL */
 		return NULL;
 	}
-}	
-#else
-Client* start_mpi_entity(const std::string& config, void*,int*,int*)
+	
+	int Server::commit(const std::string & varname, int32_t iteration)
+	{		
+		Variable* v = metadataManager->getVariable(varname);
+		if(v == NULL)
+			return -1;
+
+		ShmChunk* chunk = NULL;
+		// get the pointer to the allocated chunk
+		ChunkIndexByIteration::iterator end;
+		ChunkIndexByIteration::iterator it = v->getChunksByIteration(iteration,end);
+
+		if(it == end)
+			return -2;
+		try {
+			chunk = dynamic_cast<ShmChunk*>(it->get());
+		} catch(std::exception &e) {
+			ERROR("When doing dynamic cast: " << e.what());
+			return -3;
+		}
+	
+		// nothing to do actually, the server already knows the variable
+			
+                // free message
+		DBG("Variable \"" << varname << "\" has been commited");
+
+		return 0;
+	}
+	
+	int Server::write(const std::string & varname, int32_t iteration, const void* data)
+	{
+		/* check that the variable is known in the configuration */
+		Variable* variable = metadataManager->getVariable(varname);
+
+        	if(variable == NULL) {
+			ERROR("Variable \""<< varname 
+				<< "\" not defined in configuration");
+			return -1;
+        	}
+
+		Layout* layout = variable->getLayout();
+
+		std::vector<int> si(layout->getDimensions()),ei(layout->getDimensions());
+                for(unsigned int i=0; i < layout->getDimensions(); i++) {
+                        ei[i] = layout->getExtentAlongDimension(i)-1;
+                        si[i] = 0;
+                }
+
+		ShmChunk* chunk = NULL;
+                try {
+                        chunk = new ShmChunk(segment,layout->getType(),
+						layout->getDimensions(),si,ei);
+                        chunk->setSource(env->getID());
+                        chunk->setIteration(iteration);
+                } catch (...) {
+                        ERROR("While writing \"" << varname << "\", allocation failed");
+                	return -2;
+		}
+
+		// copy data
+		size_t size = chunk->getDataMemoryLength();
+		memcpy(chunk->data(),data,size);
+	
+		variable->attachChunk(chunk);	
+		
+		// send message
+		DBG("Variable \"" << varname << "\" has been written");
+	
+		return size;
+	}
+
+	int Server::chunk_write(chunk_h chunkh, const std::string & varname, 
+			int32_t iteration, const void* data)
+	{
+		/* check that the variable is know in the configuration */
+		Variable* variable = metadataManager->getVariable(varname);
+
+        	if(variable == NULL) {
+			ERROR("Variable \""<< varname << "\" not defined in configuration");
+			return -1;
+        	}
+
+		ChunkHandle* chunkHandle = (ChunkHandle*)chunkh;
+
+		/* check if the chunk matches the layout boundaries */
+		Layout* layout = variable->getLayout();
+		if(not chunkHandle->within(layout)) {
+			ERROR("Chunk boundaries do not match variable's layout");
+			return -3;
+		}
+
+		ShmChunk* chunk = NULL;
+                try {
+			Types::basic_type_e t = layout->getType();
+			unsigned int d = chunkHandle->getDimensions();
+			std::vector<int> si(d);
+			std::vector<int> ei(d);
+
+			for(unsigned int i=0;i<d; i++) {
+				si[i] = chunkHandle->getStartIndex(i);
+				ei[i] = chunkHandle->getEndIndex(i);
+			}
+
+                        chunk = new ShmChunk(segment,t,d,si,ei);
+                        chunk->setSource(env->getID());
+                        chunk->setIteration(iteration);
+                } catch (...) {
+                        ERROR("While writing \"" << varname << "\", allocation failed");
+                	return -2;
+		}
+
+		// copy data
+		size_t size = chunk->getDataMemoryLength();
+		memcpy(chunk->data(),data,size);
+		
+		variable->attachChunk(chunk);	
+		DBG("Variable \"" << varname << "\" has been written");
+	
+		return size;
+	}
+
+	int Server::signal(const std::string & signal_name, int32_t iteration)
+	{
+		Action* action = actionsManager->getAction(signal_name);
+		if(action == NULL) {
+			DBG("Undefined action \"" << signal_name << "\"");
+			return -2;
+		}
+
+		action->call(iteration,env->getID());
+
+		DBG("Event \""<< signal_name << "\" has been sent");
+		return 0;
+	}
+
+	int Server::kill_server()
+	{
+		WARN("Synchronous server cannot be killed (you own your process, man!)");
+		return -1;
+	}
+
+#ifdef __ENABLE_MPI
+Client* start_mpi_entity(const std::string& configFile, MPI_Comm globalcomm)
 {
-        ERROR("Damaris is not compiled with MPI support. Aborting.");
-        exit(-1);
-        return NULL;
-}
+	/* Global rank and size in the passed communicator */
+	int size, rank;
+	MPI_Comm_size(globalcomm,&size);
+	MPI_Comm_rank(globalcomm,&rank);
+
+	Configuration* config = Configuration::getInstance();
+	
+	try {
+		std::auto_ptr<Model::simulation_mdl> 
+			mdl(Model::simulation(configFile.c_str(),xml_schema::flags::dont_validate));
+
+		config->initialize(mdl,configFile);	
+	} catch (xml_schema::exception &e) {
+		ERROR(e.what());
+		MPI_Abort(MPI_COMM_WORLD,-1);
+	}
+
+	Environment* env = config->getEnvironment();
+	env->setGlobalComm(globalcomm);
+
+	/* The name of the processor is used to compute communicators */
+	char procname[MPI_MAX_PROCESSOR_NAME];
+	int len;
+	MPI_Get_processor_name(procname,&len);
+
+	/* Compute the node identifier from the name */
+	uint64_t nhash = (uint64_t)(14695981039346656037ULL);
+	uint64_t fnv =  ((uint64_t)1 << 40) + (1 << 8) + 0xb3;
+	for(int i=0; i < len; i++) {
+		uint64_t c = (uint64_t)(procname[i]);
+		nhash = nhash xor c;
+		nhash *= fnv;
+	}
+
+	/* Create a new communicator gathering processes of the same node */
+	int color = ((int)nhash >= 0) ? (int)nhash : - ((int)nhash);
+	MPI_Comm nodecomm;
+	MPI_Comm_split(globalcomm,color,rank,&nodecomm);
+	env->setNodeComm(nodecomm);
+	
+	/* Get the size and rank in the node */
+	int rankInNode;
+	int sizeOfNode;
+	MPI_Comm_rank(nodecomm,&rankInNode);
+	MPI_Comm_size(nodecomm,&sizeOfNode);
+	
+	/* Get the number of clients and cores provided in configuration */
+	int clpn = env->getClientsPerNode();
+	int copn = env->getCoresPerNode();
+
+	if(copn - clpn > 1) {
+		ERROR("The number of dedicated cores per node must be either 0 or 1 in this version. Aborting...");
+		MPI_Abort(MPI_COMM_WORLD,-1);
+	}
+
+	/* Check that the values match */
+	if(sizeOfNode != copn) {
+		ERROR("The number of cores detected in node does not match the number" 
+			<< " provided in configuration."
+			<< " This may be due to a configuration error or a (unprobable)"
+			<< " hash colision in the algorithm. Aborting...");
+		MPI_Abort(MPI_COMM_WORLD,-1);
+	}
+
+	/* Compute the communcator for clients and servers */
+	int is_client = (rankInNode >= clpn) ? 0 : 1;
+	MPI_Comm entitycomm;
+	MPI_Comm_split(globalcomm,is_client,rank,&entitycomm);
+	env->setEntityComm(entitycomm);
+	
+	/* Get rank and size in the entity communicator */
+	int rankInEnComm, sizeOfEnComm;
+	MPI_Comm_rank(entitycomm,&rankInEnComm);
+	MPI_Comm_size(entitycomm,&sizeOfEnComm);
+
+	/* Set the rank of the entity */
+	env->setID(rankInEnComm);
+
+	if(not (copn == clpn)) {
+		// dedicated core mode : the number of servers to create is strictly positive
+		if(is_client) {
+			DBG("Client starting, rank = " << rank);
+			// the following barrier ensures that the client
+			// won't be created before the servers are started.
+			MPI_Barrier(globalcomm);
+			return new Client(config);
+		} else {
+			DBG("Server starting, rank = " << rank);
+			Server server(config);
+			MPI_Barrier(globalcomm);
+			server.run();
+			return NULL;
+		}
+	} else {
+		// synchronous mode : the servers are attached to each client
+		if(rankInNode != 0) {
+			MPI_Barrier(globalcomm);
+			return new SecondaryServer(config);
+		} else {
+			Server* s = new Server(config);
+			MPI_Barrier(globalcomm);
+			return s;
+		}
+	}
+}	
 #endif
 
 }

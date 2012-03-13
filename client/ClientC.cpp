@@ -86,6 +86,11 @@ int DC_get_parameter(const char* param_name, void* buffer)
 	return client->get_parameter(paramName,buffer);
 }
 
+MPI_Comm DC_get_clients_communicator()
+{
+	return client->get_clients_communicator();
+}
+
 int DC_kill_server()
 {
 	return client->kill_server();

@@ -35,21 +35,21 @@ along with Damaris.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Damaris {
 
-	Configuration* Configuration::m_instance = NULL;
-		
-	Configuration::Configuration(std::auto_ptr<Model::simulation_mdl> mdl, 
-			const std::string & cfgFile)
+	Configuration::Configuration()
 	{
-		configFile = new std::string(cfgFile);
-		baseModel = mdl;
-		metadataManager = NULL;
+		initialized = false;
 		actionsManager = NULL;
-		fillParameterSet();
-		layoutInterp = new Calc<std::string::const_iterator,ParameterSet>(parameters);
+		metadataManager = NULL;
+		environment = NULL;
 	}
 
 	Configuration::~Configuration()
 	{
+		ActionsManager::kill();
+		MetadataManager::kill();
+		Environment::kill();
+
+		delete parameters;
 		delete configFile;
 		delete layoutInterp;
 	}
@@ -61,32 +61,32 @@ namespace Damaris {
 			std::string name(p->name());
 			if(p->type() == "short") {
 				short value = boost::lexical_cast<short>(p->value());
-				parameters.set<short>(name,value);
+				parameters->set<short>(name,value);
 			} else
 			if(p->type() == "int") {
 				std::string name(p->name());
 				int value = boost::lexical_cast<int>(p->value());
-				parameters.set<int>(name,value);
+				parameters->set<int>(name,value);
 			} else 
 			if(p->type() == "long") {
 				long value = boost::lexical_cast<long>(p->value());
-				parameters.set<long>(name,value);
+				parameters->set<long>(name,value);
 			} else
 			if(p->type() == "float") {
 				float value = boost::lexical_cast<float>(p->value());
-				parameters.set<float>(name,value);
+				parameters->set<float>(name,value);
 			} else
 			if(p->type() == "double") {
 				double value = boost::lexical_cast<double>(p->value());
-				parameters.set<double>(name,value);
+				parameters->set<double>(name,value);
 			} else
 			if(p->type() == "char") {
 				char value = boost::lexical_cast<char>(p->value());
-				parameters.set<char>(name,value);
+				parameters->set<char>(name,value);
 			} else
 			if(p->type() == "string") {
 				std::string value = boost::lexical_cast<std::string>(p->value());
-				parameters.set<std::string>(name,value);
+				parameters->set<std::string>(name,value);
 			} else
 			{
 				ERROR("Undefined type \"" << p->type() 
@@ -97,14 +97,14 @@ namespace Damaris {
 	
 	ParameterSet* Configuration::getParameterSet()
 	{
-		return &parameters;
+		return parameters;
 	}
 
 	MetadataManager* Configuration::getMetadataManager()
 	{
 		if(metadataManager == NULL)
 		{
-			metadataManager = new MetadataManager();
+			metadataManager = MetadataManager::getInstance();
 			fillMetadataManager();
 		}
 		return metadataManager;
@@ -121,6 +121,8 @@ namespace Damaris {
 			Types::basic_type_e type = Types::getTypeFromString(&(l->type()));
 			Language::language_e language = 
 				Language::getLanguageFromString(&(l->language()));
+			if(language == Language::LG_UNKNOWN)
+				language = environment->getDefaultLanguage();
 
 			if(type == Types::UNDEFINED_TYPE) {
 				ERROR("Unknown type \"" << l->type() 
@@ -145,7 +147,7 @@ namespace Damaris {
 				std::vector<int> rdims(dims.rbegin(),dims.rend());
 				dims = rdims;
 			}
-                 	Layout l(type,dims.size(),dims);
+                 	Layout l(name,type,dims.size(),dims);
 			metadataManager->addLayout(name,l);
 		}
 		
@@ -190,84 +192,45 @@ namespace Damaris {
 	{
 		if(actionsManager == NULL)
 		{
-			actionsManager = new ActionsManager();
+			actionsManager = ActionsManager::getInstance();
 			fillActionsManager();
 		}
+                DBG("point 4");
 		return actionsManager;
 	}
 
 	void Configuration::fillActionsManager()
 	{
-		Model::actions_mdl::event_const_iterator p(baseModel->actions().event().begin());
-		for(; p < baseModel->actions().event().end(); p++) {
-			std::string name = p->name();
-			std::string fun = p->action();
-			std::string file = p->library();
-			actionsManager->addDynamicAction(&name,&file,&fun);
+		Model::actions_mdl::event_const_iterator e(baseModel->actions().event().begin());
+		for(; e < baseModel->actions().event().end(); e++) {
+			actionsManager->addDynamicAction(e->name(),e->library(),e->action(),e->scope());
 		}
+		Model::actions_mdl::script_const_iterator s(baseModel->actions().script().begin());
+		for(; s < baseModel->actions().script().end(); s++) {
+			actionsManager->addScriptAction(s->name(),s->file(),s->language(),s->scope());
+		}
+                DBG("point 3");
 	}
 
-	Configuration* Configuration::getInstance()
+	Environment* Configuration::getEnvironment()
 	{
-		return m_instance;
-	}
-
-	void Configuration::initialize(std::auto_ptr<Model::simulation_mdl> mdl, const std::string& cfgFile)
-	{
-		if(m_instance) {
-			WARN("Configuration already initialized.");
-			return;
-		}
-		m_instance = new Configuration(mdl,cfgFile);
+		return environment;
 	}
 	
-	void Configuration::finalize()
+	void Configuration::initialize(std::auto_ptr<Model::simulation_mdl> mdl, const std::string& cfgFile)
 	{
-		if(m_instance == NULL) {
-			WARN("Configuration already finalized.");
-			return;
-		}
-		delete m_instance;
-	}
+		configFile = new std::string(cfgFile);
+		baseModel = mdl;
+		Model::simulation_mdl* tmpModel = baseModel.get();
 
-	const std::string & Configuration::getMsgQueueName() const
-	{
-		return baseModel->architecture().queue().name();
-	}
+		parameters = new ParameterSet();
+		fillParameterSet();
+		
+		environment = Environment::getInstance();
+		environment->initialize(tmpModel);
 
-	size_t Configuration::getMsgQueueSize() const
-	{
-		return (size_t)(baseModel->architecture().queue().size());
-	}
-
-	const std::string & Configuration::getSegmentName() const
-	{
-		return baseModel->architecture().buffer().name();
-	}
-
-	size_t Configuration::getSegmentSize() const
-	{
-		return (size_t)(baseModel->architecture().buffer().size());
-	}
-
-	int Configuration::getCoresPerNode() const 
-	{
-		return baseModel->architecture().cores().count();
-	}
-
-	int Configuration::getClientsPerNode() const
-	{
-		return baseModel->architecture().cores().clients().count();
-	}
-
-	const std::string & Configuration::getSimulationName() const
-	{
-		return baseModel->name();
-	}
-
-	Language::language_e Configuration::getDefaultLanguage() const
-	{
-		return Language::getLanguageFromString(&(baseModel->language()));
+		layoutInterp = new Calc<std::string::const_iterator,ParameterSet>(*parameters);
+		initialized = true;
 	}
 }
 

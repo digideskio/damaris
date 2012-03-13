@@ -27,8 +27,10 @@ along with Damaris.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Damaris {
 	
-	Layout::Layout(Types::basic_type_e t, unsigned int d, std::vector<int> &ex)
+	Layout::Layout(const std::string &n, Types::basic_type_e t, 
+			unsigned int d, std::vector<int> &ex)
 	{
+		name = n;
 		type = t;
 		dimensions = d;
 		if(ex.size() != d) {
@@ -39,6 +41,11 @@ namespace Damaris {
 	
 	Layout::~Layout()
 	{
+	}
+
+	const std::string& Layout::getName() const
+	{
+		return name;
 	}
 	
 	Types::basic_type_e Layout::getType() const
@@ -57,5 +64,10 @@ namespace Damaris {
 			return extents[dim];
 		else
 			return 0;
+	}
+
+	bool Layout::isUnlimited() const
+	{
+		return (dimensions == 1) && (extents[0] == -1);
 	}
 }

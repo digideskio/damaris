@@ -51,7 +51,7 @@
 	</xs:complexType>
 
 	<!-- Variable node -->
-	<xs:complexType name="variable_mdl">
+	<xs:complexType name="variable_mdl" mixed="true">
 	<xs:sequence>
 		<xs:element name="description" type="xs:string" minOccurs="0"/>
 	</xs:sequence>
@@ -95,12 +95,22 @@
 	<xs:attribute name="name"    type="xs:string" use="required"/>
 	<xs:attribute name="action"  type="xs:string" use="required"/>
 	<xs:attribute name="library" type="xs:string" use="required"/>
+	<xs:attribute name="scope"   type="xs:string" use="optional" default="core" />
+	</xs:complexType>
+
+	<!-- Script node -->
+	<xs:complexType name="script_mdl">
+	<xs:attribute name="name"     type="xs:string" use="required" />
+	<xs:attribute name="file"     type="xs:string" use="required" />
+	<xs:attribute name="language" type="xs:string" use="required" />
+	<xs:attribute name="scope"    type="xs:string" use="optional" default="core" />
 	</xs:complexType>
 
 	<!-- Actions node -->
 	<xs:complexType name="actions_mdl">
 	<xs:sequence>
 		<xs:element name="event" type="mdl:event_mdl" minOccurs="0" maxOccurs="unbounded"/>
+		<xs:element name="script" type="mdl:script_mdl" minOccurs="0" maxOccurs="unbounded"/>
 	</xs:sequence>
 	</xs:complexType>
 

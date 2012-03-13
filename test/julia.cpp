@@ -5,7 +5,7 @@
 #include "include/Damaris.hpp"
 
 #define PI 3.14159265358979323846
-#define ITERATIONS 10
+#define ITERATIONS 100
 
 #define WIDTH  640
 #define HEIGHT 480
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
 		compute(fractal,c);
 		
 		client->write("images/julia",i,fractal);
-		client->signal("draw",i);
+		client->signal("call_python",i);
 	}
 
 	client->kill_server();

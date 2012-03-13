@@ -34,6 +34,7 @@ int compute(char* data, std::complex<double> c, int offset_x, int offset_y) {
 int main(int argc, char** argv) 
 {
 	int rank, size;
+	MPI_Comm global = MPI_COMM_WORLD;
         MPI_Comm comm;
 
         MPI_Init (&argc, &argv);
@@ -45,9 +46,12 @@ int main(int argc, char** argv)
 
 	std::string config(argv[1]);
 
-	Damaris::Client* client = Damaris::start_mpi_entity(config,&comm,&rank,&size);
+	Damaris::Client* client = Damaris::start_mpi_entity(config,global);
 
 	if(client != NULL) {
+		comm = client->get_clients_communicator();
+		MPI_Comm_rank(comm,&rank);
+		MPI_Comm_size(comm,&size);
 
 		if(size != 4) {
 			std::cout << "This program is an example working only with 4 clients.\n";

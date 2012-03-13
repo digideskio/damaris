@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
@@ -7,8 +8,12 @@ int client_code(int id)
 {
 	float mydata[64][16][4];
 	char* varname = "my group/my variable";
-	char* event = "my event";
+	char* event = "my script";
 
+	int step;
+	for(step = 0; step < 10; step++) {
+	
+	sleep(2);
 	int i,j,k;
 	for(i = 0; i < 64; i++) {
 	for(j = 0; j < 16; j++) {
@@ -18,13 +23,17 @@ int client_code(int id)
 	}
 	}
 
-	DC_write(varname,0,mydata);
-	DC_signal(event,0);
+	DC_write(varname,step,mydata);
+	DC_signal(event,step);
+
+	}
+
 	return 0;
 }    
 
 int main(int argc, char** argv) 
 {
+	MPI_Comm all = MPI_COMM_WORLD;
 	MPI_Comm clients;
 	int rank, size;
 
@@ -35,9 +44,13 @@ int main(int argc, char** argv)
 	
 	MPI_Init(&argc,&argv);
 
-	if(DC_start_mpi_entity(argv[1],&clients,&rank,&size)) {
+	if(DC_start_mpi_entity(argv[1],all)) {
+		clients = DC_get_clients_communicator();
+		MPI_Comm_rank(clients,&rank);
+		MPI_Comm_size(clients,&size);
 		client_code(rank);
 		DC_kill_server();
+		MPI_Barrier(clients);
 		DC_finalize();
 	}
 

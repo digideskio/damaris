@@ -18,7 +18,7 @@ along with Damaris.  If not, see <http://www.gnu.org/licenses/>.
  * \file MetadataManager.hpp
  * \date July 2011
  * \author Matthieu Dorier
- * \version 0.1
+ * \version 0.3
  *
  * MetadataManager holds pointers to all Variables published.
  * These variables can be retrieved by their identifier (name,source,iteration).
@@ -26,22 +26,31 @@ along with Damaris.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __DAMARIS_METADATA_H
 #define __DAMARIS_METADATA_H
 
+#include <iostream>
 #include <map>
 #include <vector>
 
 #include "common/Layout.hpp"
 #include "common/Variable.hpp"
 #include "common/VariableSet.hpp"
+#include "common/Singleton.hpp"
 
 namespace Damaris {
 
-	class MetadataManager {
-
+	class MetadataManager : public Singleton<MetadataManager> {
+		friend class Singleton<MetadataManager>;
 	private:
 		std::map<std::string,Layout> layouts; /*!< Map associating names with layouts. */
 		VariableSet variables; /*!< Variables indexed by name and by id. */
 
+		/**
+		 * Constructor.
+		 */
+		MetadataManager();
+
 	public:
+		VariableSet& getVariableSet() { return variables;}
+
 		/**
 		 * Add a new variable entry within the metadata manager.
 		 * An error is printed if a variable is already defined with the same name,
@@ -69,10 +78,7 @@ namespace Damaris {
 		 */
 		Layout* getLayout(const std::string& lname);
 
-		/**
-		 * Constructor.
-		 */
-		MetadataManager();
+		void listVariables(std::ostream &out);
 
 		/**
 		 * \brief Destructor.

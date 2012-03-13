@@ -49,42 +49,66 @@ void Variable::attachChunk(Chunk* chunk)
 	chunks.insert(boost::shared_ptr<Chunk>(chunk));
 }
 
-ChunkIndexBySource::iterator Variable::getChunksBySource(int source, 
-		ChunkIndexBySource::iterator &end)
+ChunkIndexBySource::iterator Variable::getChunksBySource(int source,
+	ChunkIndexBySource::iterator& end)
 {
+//	ChunkIndexBySource::iterator it = chunks.get<by_source>().find(source);
+//	end = chunks.get<by_source>().end();
 	ChunkIndexBySource::iterator it = chunks.get<by_source>().lower_bound(source);
 	end = chunks.get<by_source>().upper_bound(source);
 	return it;
 }
 
 ChunkIndexByIteration::iterator Variable::getChunksByIteration(int iteration,
-		ChunkIndexByIteration::iterator &end) 
+	ChunkIndexByIteration::iterator& end) 
 {
         ChunkIndexByIteration::iterator it = chunks.get<by_iteration>().lower_bound(iteration);
-        end = chunks.get<by_iteration>().upper_bound(iteration);
+		//.find(iteration);
+	end = chunks.get<by_iteration>().upper_bound(iteration);
+	//.end();
         return it;
+}
+
+ChunkIndex::iterator Variable::getChunks(ChunkIndex::iterator &end)
+{
+	end = chunks.get<by_any>().end();
+	return chunks.get<by_any>().begin();
+}
+
+ChunkIndex::iterator Variable::getChunks(int source, int iteration, ChunkIndex::iterator &end)
+{
+	end = chunks.get<by_any>().end();
+	return chunks.get<by_any>().find(boost::make_tuple(source,iteration));
 }
 
 void Variable::eraseChunk(ChunkIndexByIteration::iterator &it)
 {
-	ChunkIndexByIteration::iterator end = chunks.get<by_iteration>().end();
-	ChunkIndexByIteration::iterator j(it);
-	while(j != end) {
-		j->get()->remove();
-		j++;
-	}
-        chunks.get<by_iteration>().erase(it);
+//	const ChunkIndexByIteration::iterator &end = chunks.get<by_iteration>().end();
+//	ChunkIndexByIteration::iterator j(it);
+//	if(j != end) {
+	it->get()->remove();
+	chunks.get<by_iteration>().erase(it);
+//	}
 }
 
 void Variable::eraseChunk(ChunkIndexBySource::iterator &it)
 {
-	ChunkIndexBySource::iterator end = chunks.get<by_source>().end();
-        ChunkIndexBySource::iterator j(it);
-        while(j != end) {
-                j->get()->remove();
-                j++;
-        }
+//	ChunkIndexBySource::iterator j(it);
+//     	const ChunkIndexBySource::iterator &end = chunks.get<by_source>().end();
+//	if(j != end) {
+	it->get()->remove();
 	chunks.get<by_source>().erase(it);
+//	}
 }
 
+void Variable::clear()
+{
+	ChunkIndexBySource::iterator it = chunks.get<by_source>().begin();
+	while(it != chunks.get<by_source>().end())
+	{
+		it->get()->remove();
+		it++;
+	}
+	chunks.get<by_source>().clear();
+}
 }

@@ -99,21 +99,26 @@ class Variable {
 		/**
 		 * Returns the list of chunks with a specified source.
 		 */
-		ChunkIndexBySource::iterator getChunksBySource(int source, 
-				ChunkIndexBySource::iterator &end);
+		ChunkIndexBySource::iterator getChunksBySource(int source,
+			ChunkIndexBySource::iterator& end);
 
 		/**
 		 * Returns the list of chunks with a specified iteration.
 		 */
-		ChunkIndexByIteration::iterator getChunksByIteration(int iteration, 
-				ChunkIndexByIteration::iterator &end);
+		ChunkIndexByIteration::iterator getChunksByIteration(int iteration,
+			ChunkIndexByIteration::iterator& end);
 
+		ChunkIndex::iterator getChunks(ChunkIndex::iterator &end);
+
+		ChunkIndex::iterator getChunks(int source, int iteration, ChunkIndex::iterator &end);
 		/**
-		 * Delete a chunk from the variable (will not free the memory
-		 * associated to the chunk).
+		 * Delete a chunk from the variable.
 		 */
 		void eraseChunk(ChunkIndexBySource::iterator &it);
+
 		void eraseChunk(ChunkIndexByIteration::iterator &it);
+
+		void clear();
 };
 
 }

@@ -41,7 +41,8 @@ namespace Language {
 enum language_e {
 	LG_UNKNOWN,
 	LG_FORTRAN,
-	LG_C
+	LG_C,
+	LG_PYTHON
 };
 
 /**

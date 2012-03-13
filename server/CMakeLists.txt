@@ -4,6 +4,7 @@
 
 set(DAMARIS_SERVER_LIB_SRC
 		${DAMARIS_SOURCE_DIR}/server/Server.cpp
+		${DAMARIS_SOURCE_DIR}/server/SecondaryServer.cpp
 		${DAMARIS_SOURCE_DIR}/server/ServerC.cpp
 		${DAMARIS_SOURCE_DIR}/server/ServerFortran.cpp
 		${DAMARIS_SOURCE_DIR}/server/Options.cpp)
@@ -28,7 +29,8 @@ add_library (damaris-server ${DAMARIS_SERVER_LIB_SRC})
 
 add_executable (server ${DAMARIS_SOURCE_DIR}/server/main.cpp)
 
-target_link_libraries (server damaris-server damaris xerces-c ${BOOST_LIBRARIES} rt dl)
+target_link_libraries (server damaris-server damaris xerces-c ${BOOST_LIBRARIES} ${PYTHON_LIBRARIES}  rt dl)
+
 
 INSTALL(TARGETS
      server

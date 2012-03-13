@@ -31,13 +31,15 @@ along with Damaris.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Damaris {
 
+class ActionsManager;
 /**
  * The Action object is an interface to a user-defined action.
  * It is an abstract class that.
  */
 
 class Action {
-	
+	friend class ActionsManager;
+
 	protected:
 		bool loaded; 	  /*!< Indicates wether associated ressources 
 				    are loaded and ready to call the action. */
@@ -82,7 +84,7 @@ class Action {
 		 * \param[in,out] mm : pointer to the MetadataManager that contains 
 		 *                     all recorded variables.
 		 */
-		void operator()(int32_t iteration, int32_t sourceID, MetadataManager* mm);
+		void operator()(int32_t iteration, int32_t sourceID);
 		
 		/**
 		 * \brief Call the action. To be overloaded by child classes.
@@ -92,7 +94,7 @@ class Action {
 		 *                     all recorded variables.
 		 * \see Damaris::Actions::operator()
 		 */
-		virtual void call(int32_t iteration, int32_t sourceID, MetadataManager* mm) = 0;
+		virtual void call(int32_t iteration, int32_t sourceID) = 0;
 
 		/**
 		 * \brief Loads required resources for the action to be called. 

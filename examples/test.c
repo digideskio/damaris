@@ -7,7 +7,7 @@ int main(int argc, char** argv)
 	int id = 0;
 	float mydata[64][16][4];
 	char* varname = "my group/my variable";
-	char* event = "my event";
+	char* event = "my script";
 
 	if(argc != 2) {
 		printf("Usage: ./test_c <config.xml>\n");
@@ -15,6 +15,8 @@ int main(int argc, char** argv)
 	}
 
 	DC_initialize(argv[1],id);
+        printf("hello\n");
+        fflush(stdout);
 
 	int i,j,k;
 	for(i = 0; i < 64; i++) {

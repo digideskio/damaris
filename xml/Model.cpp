@@ -913,6 +913,142 @@ namespace Damaris
       this->library_.set (x);
     }
 
+    const event_mdl::scope_type& event_mdl::
+    scope () const
+    {
+      return this->scope_.get ();
+    }
+
+    event_mdl::scope_type& event_mdl::
+    scope ()
+    {
+      return this->scope_.get ();
+    }
+
+    void event_mdl::
+    scope (const scope_type& x)
+    {
+      this->scope_.set (x);
+    }
+
+    void event_mdl::
+    scope (::std::auto_ptr< scope_type > x)
+    {
+      this->scope_.set (x);
+    }
+
+    const event_mdl::scope_type& event_mdl::
+    scope_default_value ()
+    {
+      return scope_default_value_;
+    }
+
+
+    // script_mdl
+    // 
+
+    const script_mdl::name_type& script_mdl::
+    name () const
+    {
+      return this->name_.get ();
+    }
+
+    script_mdl::name_type& script_mdl::
+    name ()
+    {
+      return this->name_.get ();
+    }
+
+    void script_mdl::
+    name (const name_type& x)
+    {
+      this->name_.set (x);
+    }
+
+    void script_mdl::
+    name (::std::auto_ptr< name_type > x)
+    {
+      this->name_.set (x);
+    }
+
+    const script_mdl::file_type& script_mdl::
+    file () const
+    {
+      return this->file_.get ();
+    }
+
+    script_mdl::file_type& script_mdl::
+    file ()
+    {
+      return this->file_.get ();
+    }
+
+    void script_mdl::
+    file (const file_type& x)
+    {
+      this->file_.set (x);
+    }
+
+    void script_mdl::
+    file (::std::auto_ptr< file_type > x)
+    {
+      this->file_.set (x);
+    }
+
+    const script_mdl::language_type& script_mdl::
+    language () const
+    {
+      return this->language_.get ();
+    }
+
+    script_mdl::language_type& script_mdl::
+    language ()
+    {
+      return this->language_.get ();
+    }
+
+    void script_mdl::
+    language (const language_type& x)
+    {
+      this->language_.set (x);
+    }
+
+    void script_mdl::
+    language (::std::auto_ptr< language_type > x)
+    {
+      this->language_.set (x);
+    }
+
+    const script_mdl::scope_type& script_mdl::
+    scope () const
+    {
+      return this->scope_.get ();
+    }
+
+    script_mdl::scope_type& script_mdl::
+    scope ()
+    {
+      return this->scope_.get ();
+    }
+
+    void script_mdl::
+    scope (const scope_type& x)
+    {
+      this->scope_.set (x);
+    }
+
+    void script_mdl::
+    scope (::std::auto_ptr< scope_type > x)
+    {
+      this->scope_.set (x);
+    }
+
+    const script_mdl::scope_type& script_mdl::
+    scope_default_value ()
+    {
+      return scope_default_value_;
+    }
+
 
     // actions_mdl
     // 
@@ -933,6 +1069,24 @@ namespace Damaris
     event (const event_sequence& s)
     {
       this->event_ = s;
+    }
+
+    const actions_mdl::script_sequence& actions_mdl::
+    script () const
+    {
+      return this->script_;
+    }
+
+    actions_mdl::script_sequence& actions_mdl::
+    script ()
+    {
+      return this->script_;
+    }
+
+    void actions_mdl::
+    script (const script_sequence& s)
+    {
+      this->script_ = s;
     }
 
 
@@ -2262,6 +2416,9 @@ namespace Damaris
     // event_mdl
     //
 
+    const event_mdl::scope_type event_mdl::scope_default_value_ (
+      "core");
+
     event_mdl::
     event_mdl (const name_type& name,
                const action_type& action,
@@ -2269,7 +2426,8 @@ namespace Damaris
     : ::xml_schema::type (),
       name_ (name, ::xml_schema::flags (), this),
       action_ (action, ::xml_schema::flags (), this),
-      library_ (library, ::xml_schema::flags (), this)
+      library_ (library, ::xml_schema::flags (), this),
+      scope_ (scope_default_value (), ::xml_schema::flags (), this)
     {
     }
 
@@ -2280,7 +2438,8 @@ namespace Damaris
     : ::xml_schema::type (x, f, c),
       name_ (x.name_, f, this),
       action_ (x.action_, f, this),
-      library_ (x.library_, f, this)
+      library_ (x.library_, f, this),
+      scope_ (x.scope_, f, this)
     {
     }
 
@@ -2291,7 +2450,8 @@ namespace Damaris
     : ::xml_schema::type (e, f | ::xml_schema::flags::base, c),
       name_ (f, this),
       action_ (f, this),
-      library_ (f, this)
+      library_ (f, this),
+      scope_ (f, this)
     {
       if ((f & ::xml_schema::flags::base) == 0)
       {
@@ -2336,6 +2496,15 @@ namespace Damaris
           this->library_.set (r);
           continue;
         }
+
+        if (n.name () == "scope" && n.namespace_ ().empty ())
+        {
+          ::std::auto_ptr< scope_type > r (
+            scope_traits::create (i, f, this));
+
+          this->scope_.set (r);
+          continue;
+        }
       }
 
       if (!name_.present ())
@@ -2358,6 +2527,11 @@ namespace Damaris
           "library",
           "");
       }
+
+      if (!scope_.present ())
+      {
+        this->scope_.set (scope_default_value ());
+      }
     }
 
     event_mdl* event_mdl::
@@ -2372,13 +2546,147 @@ namespace Damaris
     {
     }
 
+    // script_mdl
+    //
+
+    const script_mdl::scope_type script_mdl::scope_default_value_ (
+      "core");
+
+    script_mdl::
+    script_mdl (const name_type& name,
+                const file_type& file,
+                const language_type& language)
+    : ::xml_schema::type (),
+      name_ (name, ::xml_schema::flags (), this),
+      file_ (file, ::xml_schema::flags (), this),
+      language_ (language, ::xml_schema::flags (), this),
+      scope_ (scope_default_value (), ::xml_schema::flags (), this)
+    {
+    }
+
+    script_mdl::
+    script_mdl (const script_mdl& x,
+                ::xml_schema::flags f,
+                ::xml_schema::container* c)
+    : ::xml_schema::type (x, f, c),
+      name_ (x.name_, f, this),
+      file_ (x.file_, f, this),
+      language_ (x.language_, f, this),
+      scope_ (x.scope_, f, this)
+    {
+    }
+
+    script_mdl::
+    script_mdl (const ::xercesc::DOMElement& e,
+                ::xml_schema::flags f,
+                ::xml_schema::container* c)
+    : ::xml_schema::type (e, f | ::xml_schema::flags::base, c),
+      name_ (f, this),
+      file_ (f, this),
+      language_ (f, this),
+      scope_ (f, this)
+    {
+      if ((f & ::xml_schema::flags::base) == 0)
+      {
+        ::xsd::cxx::xml::dom::parser< char > p (e, false, true);
+        this->parse (p, f);
+      }
+    }
+
+    void script_mdl::
+    parse (::xsd::cxx::xml::dom::parser< char >& p,
+           ::xml_schema::flags f)
+    {
+      while (p.more_attributes ())
+      {
+        const ::xercesc::DOMAttr& i (p.next_attribute ());
+        const ::xsd::cxx::xml::qualified_name< char > n (
+          ::xsd::cxx::xml::dom::name< char > (i));
+
+        if (n.name () == "name" && n.namespace_ ().empty ())
+        {
+          ::std::auto_ptr< name_type > r (
+            name_traits::create (i, f, this));
+
+          this->name_.set (r);
+          continue;
+        }
+
+        if (n.name () == "file" && n.namespace_ ().empty ())
+        {
+          ::std::auto_ptr< file_type > r (
+            file_traits::create (i, f, this));
+
+          this->file_.set (r);
+          continue;
+        }
+
+        if (n.name () == "language" && n.namespace_ ().empty ())
+        {
+          ::std::auto_ptr< language_type > r (
+            language_traits::create (i, f, this));
+
+          this->language_.set (r);
+          continue;
+        }
+
+        if (n.name () == "scope" && n.namespace_ ().empty ())
+        {
+          ::std::auto_ptr< scope_type > r (
+            scope_traits::create (i, f, this));
+
+          this->scope_.set (r);
+          continue;
+        }
+      }
+
+      if (!name_.present ())
+      {
+        throw ::xsd::cxx::tree::expected_attribute< char > (
+          "name",
+          "");
+      }
+
+      if (!file_.present ())
+      {
+        throw ::xsd::cxx::tree::expected_attribute< char > (
+          "file",
+          "");
+      }
+
+      if (!language_.present ())
+      {
+        throw ::xsd::cxx::tree::expected_attribute< char > (
+          "language",
+          "");
+      }
+
+      if (!scope_.present ())
+      {
+        this->scope_.set (scope_default_value ());
+      }
+    }
+
+    script_mdl* script_mdl::
+    _clone (::xml_schema::flags f,
+            ::xml_schema::container* c) const
+    {
+      return new class script_mdl (*this, f, c);
+    }
+
+    script_mdl::
+    ~script_mdl ()
+    {
+    }
+
     // actions_mdl
     //
 
     actions_mdl::
     actions_mdl ()
     : ::xml_schema::type (),
-      event_ (::xml_schema::flags (), this)
+      event_ (::xml_schema::flags (), this),
+      script_ (::xml_schema::flags (), this)
     {
     }
 
@@ -2387,7 +2695,8 @@ namespace Damaris
                  ::xml_schema::flags f,
                  ::xml_schema::container* c)
     : ::xml_schema::type (x, f, c),
-      event_ (x.event_, f, this)
+      event_ (x.event_, f, this),
+      script_ (x.script_, f, this)
     {
     }
 
@@ -2396,7 +2705,8 @@ namespace Damaris
                  ::xml_schema::flags f,
                  ::xml_schema::container* c)
     : ::xml_schema::type (e, f | ::xml_schema::flags::base, c),
-      event_ (f, this)
+      event_ (f, this),
+      script_ (f, this)
     {
       if ((f & ::xml_schema::flags::base) == 0)
       {
@@ -2423,6 +2733,17 @@ namespace Damaris
             event_traits::create (i, f, this));
 
           this->event_.push_back (r);
+          continue;
+        }
+
+        // script
+        //
+        if (n.name () == "script" && n.namespace_ () == "http://damaris.gforge.inria.fr/Damaris/Model")
+        {
+          ::std::auto_ptr< script_type > r (
+            script_traits::create (i, f, this));
+
+          this->script_.push_back (r);
           continue;
         }
 

@@ -1,0 +1,4 @@
+#ifndef FC_FUNC_HEADER_INCLUDED
+#define FC_FUNC_HEADER_INCLUDED
+
+#endif
