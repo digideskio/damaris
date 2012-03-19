@@ -56,5 +56,14 @@ void FC_FUNC_GLOBAL(df_start_mpi_entity,DF_START_MPI_ENTITY)
 		client = Damaris::start_mpi_entity(std::string(configFile_f,configsize),oc);
 		*result = (client != NULL) ? 1 : 0;
 	}
+
+void FC_FUNC_GLOBAL(df_get_entity_comm,DF_GET_ENTITY_COMM)
+    (MPI_Fint* entity_comm)
+    {
+        MPI_Comm clients = DC_get_clients_communicator();
+        entity_comm = MPI_Comm_c2f(clients);
+    }
+
+
 }
 #endif
