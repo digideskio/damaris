@@ -53,9 +53,15 @@ along with Damaris.  If not, see <http://www.gnu.org/licenses/>.
 #define TIMER_STOP(timer, message)
 #endif
 
-#define MESSAGE(out, level, message)\
-    out << "[" << level << " " << boost::posix_time::microsec_clock::local_time() << "] [" \
-    << __RFILE__ << ":" << __LINE__ << ":" << __FUNCTION__ << "] " << message << std::endl
+#define MESSAGE(out, level, message)			  \
+   {							  \
+    std::stringstream ss;					  \
+    ss << "[" << level << " "				  \
+       << boost::posix_time::microsec_clock::local_time() \
+       << "] ["  << __RFILE__ << ":" << __LINE__ << ":"	  \
+       << __FUNCTION__ << "] " << message << std::endl ;  \
+    out << ss.str();					  \
+   }
 
 #ifdef __INFO
 #define __ERROR
