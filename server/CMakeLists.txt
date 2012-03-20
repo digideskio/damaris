@@ -31,6 +31,8 @@ add_executable (server ${DAMARIS_SOURCE_DIR}/server/main.cpp)
 
 target_link_libraries (server damaris-server damaris xerces-c ${BOOST_LIBRARIES} ${PYTHON_LIBRARIES}  rt dl)
 
+include_directories ("${PROJECT_SOURCE_DIR}/include")
+
 
 INSTALL(TARGETS
      server
