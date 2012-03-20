@@ -34,6 +34,7 @@ along with Damaris.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <mpi.h>
 
+//#include "Damaris.h"
 #include "server/Server.hpp"
 
 extern Damaris::Server *server;
@@ -60,8 +61,8 @@ void FC_FUNC_GLOBAL(df_start_mpi_entity,DF_START_MPI_ENTITY)
 void FC_FUNC_GLOBAL(df_get_entity_comm,DF_GET_ENTITY_COMM)
     (MPI_Fint* entity_comm)
     {
-        MPI_Comm clients = DC_get_clients_communicator();
-        entity_comm = MPI_Comm_c2f(clients);
+	MPI_Comm clients = client->get_clients_communicator();
+        *entity_comm = MPI_Comm_c2f(clients);
     }
 
 
