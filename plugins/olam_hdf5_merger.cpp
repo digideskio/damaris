@@ -3,6 +3,8 @@
 #include "server/ServerConfiguration.hpp"
 #include "common/MetadataManager.hpp"
 
+using namespace std;
+
 extern "C" {
 
 
@@ -12,6 +14,122 @@ HDF5_Type get_type_of_var(Damaris::Variable &v) {
 }
 
 */
+
+
+/*****
+ * Extract the first element of a variable
+ * with source or iteration = -1 , select any occurence of the var
+ * */
+size_t get_unidimensional_variable(
+    Damaris::MetadataManager * db,
+    const std::string * vname, 
+    const int source_id,
+    const int iteration_id,
+    void * dest,
+    size_t dest_size) 
+{
+
+  int any;
+  Damaris::ChunkIndex::iterator it, end;
+  Damaris::Variable * var = db->getVariable(vname);
+
+  if (var == NULL) {
+    return -1;
+  }
+
+
+
+  // Get an iterator to a chunk that matches source or iteration -- or both
+  if  (  (source_id == -1) && (iteration_id == -1)  ) {
+    it = var->getChunks(end);
+  } else if ( (source_id >= 0) && (iteration_id >= 0) ) {
+    it = var->getChunks( source_id, iteration_id, end);
+  } else if (source_id >= 0) {
+    it = var->getChunksBySource(source_id, end);
+  } else {   // if (iteration_id >= 0)
+    it = var->getChunksByIteration(iteration_id, end);
+  }
+
+  //
+  while (it != end) {
+    Damaris::Chunk * chunk;
+    Damaris::Types::basic_type_e var_type ;
+    size_t elementary_type_size;
+
+    chunk     = it->get();
+    var_type  = chunk->getType();
+    elementary_type_size = Damaris::Types::basicTypeSize(type);
+
+
+    // Make sure that we can store the first (ideally only) element of the
+    // array into dest
+    if (elementary_type_size > dest_size) {
+      cerr << "warning: Trying to get " << dest_size << " bytes of variable " << vname << " but elementary type has " << elementary_type_size << "bytes!!!!"  << endl;
+
+      return -1;
+    }
+
+    memcpy(dest, chunk->data(), elementary_type_size) ;
+    return elementary_type_size;
+  }
+
+  // if there was no valid chunk, default to -1
+  return -1;
+
+
+
+}
+
+
+
+hid_t get_hdf5_type(const Damaris::Types::basic_type_e etype)
+{
+  switch(etype) {
+    case SHORT:     //  short int, integer*2
+
+      return  H5T_NATIVE_SHORT;
+
+
+    case INT:       // int, integer*4
+
+      return H5T_NATIVE_INT;
+
+    case LONG:      // long int, integer*8
+
+      return H5T_NATIVE_LONG;
+
+    case FLOAT:     // float, real 
+
+      return H5T_NATIVE_FLOAT;
+
+    case DOUBLE:    // double, real*8
+
+      return H5T_NATIVE_DOUBLE;
+
+    case CHAR:      // char, character
+
+      return H5T_NATIVE_CHAR;
+
+    case STR:       // string 
+
+      return H5T_C_S1;
+
+    case UNDEFINED_TYPE:  /*!< don't know the type  (bad...) */
+
+      cerr << "Unknown datatype!!! Defaults to char" << endl;
+      break;
+  }
+
+  return H5T_NATIVE_CHAR;
+
+
+}
+
+
+
+
+
+
 
 
   void dump_hdf5(const std::string * event, int32_t step, int32_t src,
