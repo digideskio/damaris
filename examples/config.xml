@@ -2,8 +2,8 @@
 <simulation name="my simulation" 
 	language="fortran" xmlns="http://damaris.gforge.inria.fr/Damaris/Model">
 	<architecture>
-		<cores  count="2">
-			<clients count="2"/>
+		<cores  count="1">
+			<clients count="1"/>
 		</cores>
 		<buffer name="buffer" size="67108864" />
 		<queue  name="queue" size="100" />
@@ -25,6 +25,7 @@
 	</data>
 	<actions>
 		<event name="my event" action="my_function" library="hello.so"/>
-		<script name="my script" file="script.py" language="python"/>
+                <!-- <script name="my script" file="script.py" language="python"/>  -->
+		<event name="my script" action="dump_hdf5" library="hello.so"/>
 	</actions>
 </simulation>
