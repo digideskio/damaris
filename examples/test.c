@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "include/Damaris.h"      
+#include <time.h>
 
 int main(int argc, char** argv) 
 {
@@ -29,6 +30,8 @@ int main(int argc, char** argv)
 	
 	DC_write(varname,0,mydata);
 	DC_signal(event,0);
+
+        //sleep(10);
 
 	DC_finalize();
 	return 0;

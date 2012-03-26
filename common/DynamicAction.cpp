@@ -56,6 +56,8 @@ namespace Damaris {
 			load();
 		if(function != NULL)
 			(*function)(name,iteration,sourceID);
+                else
+                  ERROR("Tryed to call function that does not exist!\n");
 	}
 
 	void DynamicAction::load()
@@ -80,5 +82,11 @@ namespace Damaris {
 			ERROR("While loading function in dynamic library: " << error);
 			return;
 		}
+
+                if (!function) {
+                  ERROR("Could not find the function" << funName << "!\n");
+                }
+
+                INFO("Loaded function" << funName << std::endl);
 	}
 }
