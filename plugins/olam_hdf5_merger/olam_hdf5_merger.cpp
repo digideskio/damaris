@@ -10,6 +10,10 @@
 #include "common/Environment.hpp"
 #include "common/VariableSet.hpp"
 
+
+
+#define __ENABLE_COMPRESSION
+
 using namespace std;
 
 extern "C" {
@@ -171,7 +175,7 @@ extern "C" {
     Damaris::Environment * env;
     Damaris::MetadataManager * db ;
 
-    cerr << "Hello there!!!" << endl;
+    //cerr << "Hello there!!!" << endl;
 
     //return ; 
 
@@ -184,11 +188,11 @@ extern "C" {
     static int waiting;
     waiting++;
 
-    //if (waiting == nb_clients)
-    //{
+    if (waiting == nb_clients)
+    {
       waiting = 0;
       //TIMER_START(write_time) 
-      hid_t dataset_id, dataspace_id, chunk_id;
+      hid_t dataset_id, dataspace_id, chunk_prop_id;
       hid_t file_id;
       hid_t link_prop_id;
 
@@ -200,37 +204,37 @@ extern "C" {
 
       int serverID = env->getID();
       // create the file
-      sprintf(filename, "olam_hist.%d.%d.h5", (int) step, serverID);
+      sprintf(filename, "hist/olam_hist.%d.%d.%d.h5", (int) step, serverID,src);
 
-      cerr << "Will create " << filename << endl;
+      //cerr << "Will create " << filename << endl;
 
       file_id =
           H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-      cerr << "ok, file id is " << file_id << endl;
+      //cerr << "ok, file id is " << file_id << endl;
 
       link_prop_id = H5Pcreate(H5P_LINK_CREATE);
       H5Pset_create_intermediate_group(link_prop_id, 1);
 
-      cerr << "set create intermediate group" << endl;
+      //cerr << "set create intermediate group" << endl;
 
       // olam has at most 2 dimensions, but just in case, I'll
       // keep the 3
       hsize_t dims[30], chunkdims[30];
 
 
-      cerr << "get variable set " << endl;
+      //cerr << "get variable set " << endl;
       Damaris::VariableSet & lv = db->getVariableSet();
       Damaris::VariableSet::index<Damaris::by_name>::type::iterator it = 
                                           lv.get<Damaris::by_name>().begin();
       const Damaris::VariableSet::index<Damaris::by_name>::type::iterator &end = 
                                           lv.get<Damaris::by_name>().end();
 
-      cerr << "gonna loop through the variables" << endl;
+      //cerr << "gonna loop through the variables" << endl;
 
       while(it != end) {
-        cerr << "gotta in!" << endl;
-        cerr.flush();
+        //cerr << "gotta in!" << endl;
+        //cerr.flush();
         Damaris::Variable * v = it->get();
 
 
@@ -238,7 +242,7 @@ extern "C" {
 
         chunk_it = v->getChunks(chunk_end);
 
-        cerr << "gonna loop the chunks of " << v->getName() << endl;
+        //cerr << "gonna loop the chunks of " << v->getName() << endl;
         while (chunk_it != chunk_end) {
 
           Damaris::Chunk * c = chunk_it->get();
@@ -249,72 +253,77 @@ extern "C" {
             int dimensions = c->getDimensions();
             for (int i = 0; i < dimensions; i++) {
               dims[i] = chunkdims[i] =
-                  c->getEndIndex(i) - c->getStartIndex(i) + 1;
+                  c->getEndIndex(i) - c->getStartIndex(i);
 
-              cerr << "dims[" << i << "] = " << dims[i] << endl;
+              //cerr << "dims[" << i << "] = " << dims[i] << endl;
             }
 
-            if (dimensions >= 3)        // is it really necessary?
-            {
-              cerr << "setting up chuncking" << endl;
-              chunk_id = H5Pcreate(H5P_DATASET_CREATE);
-              H5Pset_chunk(chunk_id, dimensions, chunkdims);
+            //if (dimensions >= 3)        // is it really necessary?
+            //{
+              //cerr << "setting up chuncking" << endl;
+              chunk_prop_id = H5Pcreate(H5P_DATASET_CREATE);
+              H5Pset_chunk(chunk_prop_id, dimensions, chunkdims);
 
 #ifdef __ENABLE_COMPRESSION
-              cerr << "setting filter" << endl;
-              H5Pset_filter(chunk_id, 1, 0, 1, gzip_filter_values);
+              //cerr << "setting filter" << endl;
+              H5Pset_filter(chunk_prop_id, 1, 0, 1, gzip_filter_values);
 #endif
 
-            } else {
-              cerr << "defult chunk id" << endl;
-              chunk_id = H5P_DEFAULT;
-            }
+
+	      H5Pset_shuffle(chunk_prop_id);
+
+            //} else {
+              //cerr << "defult chunk id" << endl;
+            //  chunk_id = H5P_DEFAULT;
+            // }
 
 
-            cerr << "creating dspace" << endl;
+            //cerr << "creating dspace" << endl;
             dataspace_id = H5Screate_simple(dimensions, dims, NULL);
 
 
             snprintf(dsetname, 128, "%d/%s", c->getSource(), v->getName().c_str());
-            cerr << "dsetname:" << dsetname << endl;
+            //cerr << "dsetname:" << dsetname << endl;
 
 
 
-            cerr << "creating dataset" << endl;
+            //cerr << "creating dataset" << endl;
             dataset_id =
                 H5Dcreate(file_id,
                           dsetname,
                           get_hdf5_type(c->getType()),
                           dataspace_id,
                           link_prop_id,
-                          H5P_DEFAULT,
+                          chunk_prop_id,
                           H5P_DEFAULT);
 
-            cerr << "writing" << endl;
-            H5Dwrite(dataset_id, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL,
-                     H5P_DEFAULT, c->data());
+            //cerr << "writing" << endl;
+            H5Dwrite(dataset_id, 
+                      get_hdf5_type(c->getType()),
+		      H5S_ALL, H5S_ALL,
+                      H5P_DEFAULT, c->data());
 
             
-            cerr << "closing dataset" << endl;
+            //cerr << "closing dataset" << endl;
             H5Dclose(dataset_id);
           }                     // correct iteration?
 
 
 
-          cerr << "next chunck" << endl;
+          //cerr << "next chunck" << endl;
           chunk_it++;
 
         }
-        cerr << "clear chunks" << endl;
+        //cerr << "clear chunks" << endl;
         v->clear();             // clear all chunks!!!!!
         it++;
       }                         // for 
 
-      cerr  << "closing everything" << endl;
+      //cerr  << "closing everything" << endl;
       H5Fclose(file_id);
       H5Pclose(link_prop_id);
       H5close();
-    //}
+    }
 
   }
 

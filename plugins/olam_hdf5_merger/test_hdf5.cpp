@@ -35,13 +35,14 @@ int main(int argc, char **argv)
 
   hid_t dataset_id, dataspace_id, chunk_id;
   hid_t file_id;
-  hid_t link_prop_id;
+  hid_t link_prop_id, chunk_prop_id;
   unsigned int gzip_filter_values[1];
   hsize_t dims[30], chunkdims[30];
 
   float mydata[64][16][4];
   int i, j, k, dimensions;
 
+      gzip_filter_values[0] = 4;
 
 
 
@@ -61,9 +62,16 @@ int main(int argc, char **argv)
   gzip_filter_values[0] = 4;
 
   dimensions = 3;
-  dims[0] = 64;
-  dims[1] = 16;
-  dims[2] = 4;
+  dims[0] = chunkdims[0] = 64;
+  dims[1] = chunkdims[1] = 16;
+  dims[2] = chunkdims[2] = 4;
+              
+	      chunk_prop_id = H5Pcreate(H5P_DATASET_CREATE);
+              H5Pset_chunk(chunk_prop_id, dimensions, chunkdims);
+
+              //cerr << "setting filter" << endl;
+              H5Pset_filter(chunk_prop_id, 1, 0, 1, gzip_filter_values);
+	      H5Pset_shuffle(chunk_prop_id);
 
 
   dataspace_id = H5Screate_simple(dimensions, dims, NULL);
@@ -75,11 +83,11 @@ int main(int argc, char **argv)
   dataset_id =
       H5Dcreate(file_id,
                 "/myvar", H5T_NATIVE_FLOAT, dataspace_id, link_prop_id,
-                H5P_DEFAULT, H5P_DEFAULT);
+                chunk_prop_id, H5P_DEFAULT);
 
   if (dataset_id <= 0) {
     printf("no good\n");
-    H5Eprint(stdout);
+    H5Eprint(H5E_DEFAULT,stdout);
     exit(1);
   }
 

@@ -23,6 +23,8 @@ along with Damaris.  If not, see <http://www.gnu.org/licenses/>.
 #include "common/Debug.hpp"
 #include "common/DynamicAction.hpp"
 
+#include <unistd.h>
+
 namespace Damaris {
 
 	DynamicAction::DynamicAction(std::string fun, std::string file)
@@ -69,8 +71,10 @@ namespace Damaris {
 		
 		if(!handle)
 		{
+		      char cwd[256];
+		      getcwd(cwd,256);
 			ERROR("While loading plugin in \"" << fileName.c_str() 
-					<< "\":" << dlerror());
+					<< "\":" << dlerror() << " (current dir is " << cwd << ")");
 			return;
 		}
 
