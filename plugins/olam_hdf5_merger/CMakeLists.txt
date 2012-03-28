@@ -33,10 +33,38 @@ include_directories(${MPI_CXX_INCLUDE_PATH})
 include_directories(${HDF5_INCLUDE})
 link_directories(${HDF5_LIBDIR} ${DAMARIS_SERVER_LIBDIR} ${DAMARIS_LIBDIR})
 
-ADD_LIBRARY(olam_hdf5_merger SHARED olam_hdf5_merger.cpp)
-
+# One file per machine
+ADD_LIBRARY	     (olam_hdf5_merger SHARED olam_hdf5.cpp)
 target_link_libraries(olam_hdf5_merger hdf5  ${DAMARIS_LIB}  ${DAMARIS_SERVER_LIB}  )
-set_property(TARGET olam_hdf5_merger PROPERTY COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS})
+set_property(TARGET   olam_hdf5_merger 
+			  PROPERTY 
+			    COMPILE_FLAGS "-DOLAM_HDF5_MERGER ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS}"  )
+
+#one file per rank
+ADD_LIBRARY          (olam_hdf5_single SHARED olam_hdf5.cpp)
+target_link_libraries(olam_hdf5_single hdf5  ${DAMARIS_LIB}  ${DAMARIS_SERVER_LIB}  )
+set_property(TARGET   olam_hdf5_single
+			    PROPERTY 
+			      COMPILE_FLAGS " -DOLAM_HDF5_SINGLE ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS}  " )
+
+#one file per machine / zlib
+ADD_LIBRARY          (olam_hdf5_merger_zlib SHARED olam_hdf5.cpp)
+target_link_libraries(olam_hdf5_merger_zlib hdf5 z  ${DAMARIS_LIB}  ${DAMARIS_SERVER_LIB}  )
+set_property(TARGET   olam_hdf5_merger_zlib
+                            PROPERTY 
+			      COMPILE_FLAGS "-DOLAM_HDF5_MERGER -DOLAM_HDF5_ZLIB ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS}"   )
+
+#one file per rank, / zlib
+ADD_LIBRARY          (olam_hdf5_single_zlib SHARED olam_hdf5.cpp)
+target_link_libraries(olam_hdf5_single_zlib hdf5 z ${DAMARIS_LIB}  ${DAMARIS_SERVER_LIB}  )
+set_property(TARGET   olam_hdf5_single_zlib
+			    PROPERTY 
+			      COMPILE_FLAGS "-DOLAM_HDF5_SINGLE -DOLAM_HDF5_ZLIB ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS}")
+
+
+
+
+
 
 
 

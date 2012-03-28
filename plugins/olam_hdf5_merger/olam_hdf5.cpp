@@ -12,7 +12,6 @@
 
 
 
-#define __ENABLE_COMPRESSION
 
 using namespace std;
 
@@ -184,13 +183,18 @@ extern "C" {
     env = Damaris::Environment::getInstance();
     db = Damaris::MetadataManager::getInstance();
 
+
+#ifdef OLAM_HDF5_MERGER
     int nb_clients = env->getClientsPerNode();
+
+
     static int waiting;
     waiting++;
 
     if (waiting == nb_clients)
     {
       waiting = 0;
+#endif
       //TIMER_START(write_time) 
       hid_t dataset_id, dataspace_id, chunk_prop_id;
       hid_t file_id;
@@ -199,12 +203,18 @@ extern "C" {
       char filename[128];
       char dsetname[128];
 
+#ifdef OLAM_HDF5_ZLIB
       unsigned int gzip_filter_values[1];
       gzip_filter_values[0] = 4;
+#endif
 
       int serverID = env->getID();
       // create the file
+#ifdef OLAM_HDF5_MERGER
+      sprintf(filename, "hist/olam_hist.%d.%d.h5", (int) step, serverID);
+#else
       sprintf(filename, "hist/olam_hist.%d.%d.%d.h5", (int) step, serverID,src);
+#endif
 
       //cerr << "Will create " << filename << endl;
 
@@ -264,7 +274,7 @@ extern "C" {
               chunk_prop_id = H5Pcreate(H5P_DATASET_CREATE);
               H5Pset_chunk(chunk_prop_id, dimensions, chunkdims);
 
-#ifdef __ENABLE_COMPRESSION
+#ifdef OLAM_HDF5_ZLIB
               //cerr << "setting filter" << endl;
               H5Pset_filter(chunk_prop_id, 1, 0, 1, gzip_filter_values);
 #endif
@@ -323,7 +333,9 @@ extern "C" {
       H5Fclose(file_id);
       H5Pclose(link_prop_id);
       H5close();
+#ifdef OLAM_HDF5_MERGER
     }
+#endif
 
   }
 
