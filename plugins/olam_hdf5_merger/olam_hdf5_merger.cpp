@@ -1,6 +1,9 @@
+
+
+
+#define H5Dcreate_vers 2
 #include "hdf5.h"
 #include <stdio.h>
-//#include "server/ServerConfiguration.hpp"
 #include "common/MetadataManager.hpp"
 #include "common/Types.hpp"
 #include "common/Configuration.hpp"
@@ -283,9 +286,9 @@ extern "C" {
                           dsetname,
                           get_hdf5_type(c->getType()),
                           dataspace_id,
-                          link_prop_id);
-                          //H5P_DEFAULT,
-                          //H5P_DEFAULT);
+                          link_prop_id,
+                          H5P_DEFAULT,
+                          H5P_DEFAULT);
 
             cerr << "writing" << endl;
             H5Dwrite(dataset_id, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL,
