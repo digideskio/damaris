@@ -7,7 +7,12 @@ find_package(MPI REQUIRED)
 include_directories(../../include   ../../    )
 include_directories(${MPI_C_INCLUDE_PATH})
 include_directories(${MPI_CXX_INCLUDE_PATH})
+
 ADD_LIBRARY(olam_hdf5_merger SHARED olam_hdf5_merger.cpp)
 target_link_libraries(olam_hdf5_merger hdf5)
 set_property(TARGET olam_hdf5_merger PROPERTY COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS})
 
+
+
+ADD_EXECUTABLE(test_hdf5 test_hdf5.cpp)
+target_link_libraries(test_hdf5 hdf5)
